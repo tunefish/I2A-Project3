@@ -52,7 +52,7 @@ int calculate_m(char *word, int suffix_len) {
     if (strlen(word) <= suffix_len) {
         return 0;
     }
-    
+
     int parts = 1;
 
     // type (consonant = 1, vowel = 0) of first letter
@@ -90,7 +90,7 @@ int contains_vowel(char *word, int suffix_len) {
     if (strlen(word) <= suffix_len) {
         return 0;
     }
-    
+
     int i = 0;
     while (i < strlen(word) - suffix_len) {
         if (!is_consonant(word, i)) {
@@ -125,7 +125,7 @@ int ends_with_cvc(char *word, int suffix_len) {
     if (strlen(word) <= suffix_len) {
         return 0;
     }
-    
+
     int l = strlen(word) - 1 - suffix_len;
     return is_consonant(word, l-2) && !is_consonant(word, l-1) && is_consonant(word, l) && word[l] != 'w' && word[l] != 'x' && word[l] != 'y';
 }

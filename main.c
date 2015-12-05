@@ -38,7 +38,7 @@ int main(int argc, void *argv) {
                 if (!w) {
                     printf("No documents found for search term %s\n", query);
                 }
-                
+
                 while (w) {
                     printf("Documents containing %s:\n", w->stem);
 
@@ -69,10 +69,10 @@ int main(int argc, void *argv) {
             // remove file <file> command
             char *file = (char*) malloc(strlen(command) - 11);
             memcpy(file, command+12, strlen(command) - 11);
-            
+
             // obtain document id a.k.a. index in filebase
             int doc_id = find_str(&index->documents[0].name, sizeof(indexed_document_t), file, 0, index->nr_docs - 1);
-            
+
             if (doc_id < 0) {
                 printf("Error: %s is not in the filebase!\n", file);
             } else {
@@ -81,11 +81,9 @@ int main(int argc, void *argv) {
 
             free(file);
         }
-        
+
         free(command);
     }
-    
-
 
     // release memory
     release_stopwords();

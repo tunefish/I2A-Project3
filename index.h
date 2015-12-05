@@ -1,6 +1,6 @@
 typedef struct doc {
     int id;                             // index of the document in the filebase
-    double tf;                           // number of occurances in this document
+    double tf;                          // number of occurances in this document
 } doc_t, *doc_p;
 
 typedef struct indexed_word {
@@ -11,14 +11,14 @@ typedef struct indexed_word {
 } indexed_word_t, *indexed_word_p;
 
 typedef struct indexed_document {
-    char *name;                        // name of the document
+    char *name;                         // name of the document
     int nr_words;                       // number of words in the document
 } indexed_document_t, *indexed_document_p;
 
 typedef struct index {
    indexed_word_p words;                // linked list of indexed words
    int nr_docs;                         // number of documents in the filebase
-   int nr_words;                         // number of different words in the filebase
+   int nr_words;                        // number of different words in the filebase
    indexed_document_t documents[];      // list of the names of the documents in the filebase
 } index_t, *index_p;
 

@@ -81,7 +81,7 @@ int is_stopword(char *word) {
     if (!stopwords) {
         load_stopwords();
     }
-    
+
     return find_str(stopwords, sizeof(char *), word, 0, nr_stopwords - 1) != -1;
 }
 
@@ -96,10 +96,10 @@ index_p add_file(index_p index, char *file) {
         return index;
     }
     fclose(f);
-    
+
     // insert file into file list (alphabetically ordered)
     int doc_id = 0;
-    
+
     // always insert temporary search document in the beginning
     if (strcmp(file, "._tmp_search_doc")) {
         for (doc_id = 0; doc_id < index->nr_docs; doc_id++) {
@@ -114,11 +114,11 @@ index_p add_file(index_p index, char *file) {
             }
         }
     }
-    
+
     // insert document in list
     index = (index_p) realloc(index, sizeof(index_t) + sizeof(indexed_document_t) * (index->nr_docs + 1));
     memmove(&index->documents[doc_id+1], &index->documents[doc_id], sizeof(indexed_document_t) * (index->nr_docs - doc_id));
-    
+
     index->documents[doc_id].name = (char *) malloc(strlen(file) + 1);
     memcpy(index->documents[doc_id].name, file, strlen(file) + 1);
     index->documents[doc_id].nr_words = 0;
@@ -152,7 +152,7 @@ void remove_file(index_p index, int doc_id) {
         printf("Filebase empty!\n");
         return;
     }
-    
+
     if (doc_id < 0 || doc_id >= index->nr_docs) {
         printf("Error: illegal document id. No document removed!\n");
     }
@@ -164,7 +164,7 @@ void remove_file(index_p index, int doc_id) {
 
     indexed_word_p w = index->words;    // current word
     indexed_word_p p = NULL;            // previous word
-    
+
     // remove document from the list of each indexed word
     while (w) {
         // find index of removed document in list (or of first document with higher id)
@@ -180,7 +180,7 @@ void remove_file(index_p index, int doc_id) {
                 break;
             }
         }
-        
+
         // reduce document id of all documents with id > removed document id
         // and shift array items (in order to remove entry of the document we want to remove) if neccessary
         for (; i < w->nr_docs; i++) {
@@ -195,7 +195,7 @@ void remove_file(index_p index, int doc_id) {
             } else {
                 p->next = w->next;
             }
-            
+
             index->nr_words--;
 
             indexed_word_p n = w->next;
@@ -218,28 +218,28 @@ void remove_file(index_p index, int doc_id) {
  */
 index_p search_index(index_p *in, char *query) {
     nonalpha_to_space(query);
-    
+
     FILE *search_file = fopen("._tmp_search_doc", "w");
     if (!search_file) {
         printf("Error: couldn't create temporary file to write.\nUnable to search\n");
         return NULL;
     }
-    
+
     fprintf(search_file, "%s\n", query);
     fclose(search_file);
-    
+
     *in = add_file(*in, "._tmp_search_doc");
     index_p index = *in;
-    
+
     // compute TF-IDF vector for search document
     double *q_tfidf = (double *) malloc(sizeof(double) * index->nr_words);
-    
+
     // threshold for the search, based on the distance of the search term to the empty document
     double euclid_threshold = 0;
 
     // document offset for each word where we need to continue searching (make use of sorted document ids)
     int *w_offset = (int *) malloc(sizeof(int) * index->nr_words);
-    
+
     // calculate TF-IDF, threshold and offsets
     int wid = 0;
     indexed_word_p w = index->words;
@@ -252,25 +252,25 @@ index_p search_index(index_p *in, char *query) {
             q_tfidf[wid] = 0;
             w_offset[wid] = 0;
         }
-        
+
         w = w->next;
         wid++;
     }
-    
+
     // threshold is the euclidian distance to the empty document
     euclid_threshold = sqrt(euclid_threshold);
 
     // euclidian distance of all documents to the search term (based on TF-IDF)
     doc_found_p euclid_dist = (doc_found_p) malloc(sizeof(doc_found_t) * index->nr_docs);
     memset(euclid_dist, 0, sizeof(doc_found_t) * index->nr_docs);
-    
+
     // array of all search terms without stopwords
     char *words[index->documents[0].nr_words];
     memset(words, 0, sizeof(char *) * index->documents[0].nr_words);
-    
+
     // index of last processed word in the search term
     int qid = 0;
-    
+
     // compute euclidian distance for all documents; ignore temporary search document at index 0
     int d;
     int nr_results = 0;
@@ -278,7 +278,7 @@ index_p search_index(index_p *in, char *query) {
         euclid_dist[nr_results].dist = 0;
         euclid_dist[nr_results].flag = 0;
         euclid_dist[nr_results].doc_id = d;
-        
+
         // compute TF-IDF for all words and sum the difference to the TF-IDF of the queue in euclid_dist
         qid = 0;
         int wid = 0;
@@ -288,18 +288,18 @@ index_p search_index(index_p *in, char *query) {
             if (i < w->nr_docs && w->documents[i].id == d) {
                 // word occurs in document -> calculate TF-IDF and subtract TF-IDF of queue; then square
                 euclid_dist[nr_results].dist += pow(w->documents[i].tf * logf(index->nr_docs / w->nr_docs) - q_tfidf[wid], 2);
-                
+
                 // update bit mask (set qid-th most significant bit to 1)
                 if (!w->documents[0].id) {
                     euclid_dist[nr_results].flag |= 1 << (sizeof(unsigned long) * 8 - 1 - qid);
                 }
-                
+
                 w_offset[wid]++;
             } else {
                 // word doesn't occur in document -> TF-IDF = 0 -> just square TF-IDF of queue
                 euclid_dist[nr_results].dist += q_tfidf[wid] * q_tfidf[wid];
             }
-            
+
             if (!w->documents[0].id) {
                 // this word is part of the search term
                 if (!words[qid]) {
@@ -307,35 +307,35 @@ index_p search_index(index_p *in, char *query) {
                 }
                 qid++;
             }
-            
+
             w = w->next;
             wid++;
         }
-        
+
         euclid_dist[nr_results].dist = sqrtf(euclid_dist[nr_results].dist);
-        
+
         // overwrite documents above threshold or without any hits in next iteration
         if (euclid_dist[nr_results].flag && euclid_dist[nr_results].dist < euclid_threshold) {
             nr_results++;
         }
     }
-    
+
     free(q_tfidf);
     free(w_offset);
-    
+
     // sort documents by euclidian distance to query
     qsort(euclid_dist, nr_results, sizeof(doc_found_t), cmp_doc_found_desc);
-    
+
     // create result index
     index_p result = (index_p) malloc(sizeof(index_t) + sizeof(indexed_document_t) * MAX_SEARCH_RESULTS);
     result->nr_docs = 0;
     result->nr_words = 0;
     result->words = NULL;
-    
+
     unsigned long last_flag = 0;    // flag of last processed document
     w = NULL;                       // current group of documents (of the same (sub-)set of search terms)
     indexed_word_p p = NULL;        // previous group of documents
-    
+
     // create a index_p struct with the results, each 'word' in this index represents a group of documents which contains the same (sub-)set of search terms
     int i;
     for (i = 0; i <= MAX_SEARCH_RESULTS && i < nr_results; i++) {
@@ -346,7 +346,7 @@ index_p search_index(index_p *in, char *query) {
             w_new->nr_docs = 0;
             w_new->stem = (char *) malloc(1);
             *w_new->stem = '\0';
-            
+
             // create a string of all search terms found in this document
             int k;
             for (k = 0; k < index->documents[0].nr_words; k++) {
@@ -357,11 +357,11 @@ index_p search_index(index_p *in, char *query) {
                     strcat(w_new->stem, ", ");
                 }
             }
-            
+
             // remove final ', '
             *(w_new->stem + strlen(w_new->stem) - 1) = '\0';
             *(w_new->stem + strlen(w_new->stem) - 1) = '\0';
-            
+
             // update pointer to this group
             if (!w) {
                 // first result document: set as first element of linked list
@@ -369,25 +369,25 @@ index_p search_index(index_p *in, char *query) {
             } else {
                 w->next = w_new;
             }
-            
+
             p = w;
             w = w_new;
             last_flag = euclid_dist[i].flag;
             result->nr_words++;
         }
-        
+
         // add document to group
         w = (indexed_word_p) realloc(w, sizeof(indexed_word_t) + sizeof(doc_t) * (w->nr_docs + 1));
         w->documents[w->nr_docs].id = i;
         w->documents[w->nr_docs].tf = 0;
         w->nr_docs++;
-        
+
         // copy name of the document into result index
         char *d = index->documents[euclid_dist[i].doc_id].name;
         result->documents[i].name = (char *) malloc(strlen(d) + 10);
         sprintf(result->documents[i].name, "%08.5f %s", euclid_dist[i].dist, d);
         result->nr_docs++;
-        
+
         // update pointer to this group (needed after realloc)
         if (!p) {
             result->words = w;
@@ -395,12 +395,12 @@ index_p search_index(index_p *in, char *query) {
             p->next = w;
         }
     }
-    
+
     free(euclid_dist);
-    
+
     remove_file(index, 0);
     remove("._tmp_search_doc");
-    
+
     return result;
 }
 
@@ -410,7 +410,7 @@ index_p search_index(index_p *in, char *query) {
 int cmp_doc_found_desc(const void *a, const void *b) {
    doc_found_p aa = (doc_found_p) a;
    doc_found_p bb = (doc_found_p) b;
-   
+
    if (aa->dist == bb->dist) {
        return (aa->doc_id < bb->doc_id) ? -1 : (aa->doc_id > bb->doc_id);
    } else {
@@ -432,7 +432,7 @@ void rebuild_index(index_p index) {
     }
 
     index->nr_words = 0;
-    
+
     // rescan every document
     int i;
     for (i = 0; i < index->nr_docs; i++) {
@@ -457,7 +457,7 @@ void parse_file_for_index(index_p index, char *file) {
 
     // document id = index of document in list of all documents in filebase (alphabetically ordered)
     int doc_id = find_str(&index->documents[0].name, sizeof(indexed_document_t), file, 0, index->nr_docs-1);
-    
+
     if (doc_id < 0) {
         printf("Error: %s is not in the filebase!\n", file);
         return;
@@ -477,7 +477,7 @@ void parse_file_for_index(index_p index, char *file) {
             }
 
             char *word_stem = stem(word);
-            
+
             if (!strlen(word_stem)) {
                 word = strtok(NULL, " ");
                 continue;
@@ -515,11 +515,11 @@ void parse_file_for_index(index_p index, char *file) {
                         break;
                     }
                 }
-                
+
                 // only add document to list if it's not already in the list
                 if (flag) {
                     w = (indexed_word_p) realloc(w, sizeof(indexed_word_t) + sizeof(doc_t) * (w->nr_docs + 1));
-                    
+
                     // update pointer to this group (needed after realloc)
                     if (!p) {
                         index->words = w;
@@ -536,7 +536,7 @@ void parse_file_for_index(index_p index, char *file) {
                     // increase counter for number of occurances of this word in this document
                     w->documents[i].tf++;
                 }
-                
+
                 free(word_stem);
             } else {
                 // stem is not indexed, add it to index
@@ -545,7 +545,7 @@ void parse_file_for_index(index_p index, char *file) {
                 w->nr_docs = 1;
                 w->documents[0].id = doc_id;
                 w->documents[0].tf = 1;
-                
+
                 index->nr_words++;
 
                 // insert this word in linked list
@@ -557,7 +557,7 @@ void parse_file_for_index(index_p index, char *file) {
                     p->next = w;
                 }
             }
-            
+
             // increase counter for total number of words in this document
             index->documents[doc_id].nr_words++;
 
@@ -569,18 +569,17 @@ void parse_file_for_index(index_p index, char *file) {
     }
 
     fclose(f);
-    
-    
+
     // finalize computation of TF
     indexed_word_p w = index->words;
     while (w) {
-        
+
         int i = find_int(&w->documents[0].id, sizeof(doc_t), doc_id, 0, w->nr_docs - 1);
-        
+
         if (i >= 0) {
             w->documents[i].tf /= index->documents[doc_id].nr_words;
         }
-        
+
         w = w->next;
     }
 }
@@ -641,7 +640,7 @@ index_p load_index() {
     index->words = NULL;
     index->nr_docs = 0;
     index->nr_words = 0;
-    
+
     // STEP 1: populate list of all documents
     FILE *fb_file = fopen("filebase", "r");
     if (!fb_file) {
@@ -667,18 +666,18 @@ index_p load_index() {
     int i;
     for (i = 0; i < nr_docs; i++) {
         char *line = read_line(fb_file);
-        
+
         // copy name to index
         char *tmp;
         char *doc = strtok(line, "|");
         index->documents[i].name = malloc(sizeof(char) * strlen(doc) + 1);
         memcpy(index->documents[i].name, doc, strlen(doc) + 1);
-        
+
         // copy number of words to index
         doc = strtok(NULL, "|");
         index->documents[i].nr_words = strtol(doc, &tmp, 10);
         index->nr_docs++;
-        
+
         free(line);
     }
 
@@ -723,14 +722,14 @@ index_p load_index() {
 
         // get list of documents containing this stem
         docs = strtok(NULL, ":");
-        
+
         // read each document
         doc = strtok(docs, "|");
 
         int i = 0;
         while(doc != NULL) {
             sscanf(doc, "%i/%lf", &w->documents[i].id, &w->documents[i].tf);
-            
+
             // get next document
             doc = strtok(NULL, "|");
             i++;
@@ -790,7 +789,7 @@ int find_str(void *objs, int struct_len, char *str, int min, int max) {
             return find_str(objs, struct_len, str, middle + 1, max);
         }
     }
-    
+
     // finished searching
     return -1;
 }
@@ -820,7 +819,7 @@ int find_int(void *objs, int struct_len, int i, int min, int max) {
             return find_int(objs, struct_len, i, middle + 1, max);
         }
     }
-    
+
     // finished searching
     return -1;
 }
