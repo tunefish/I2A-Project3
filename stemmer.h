@@ -1,0 +1,1 @@
+char *stem(char *word);
